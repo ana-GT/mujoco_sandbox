@@ -1,0 +1,36 @@
+<mujoco model="ur10_tracking_scene">
+
+  <compiler meshdir="assets"/>
+
+  <include file="/home/ana/Software/mujoco_menagerie/universal_robots_ur10e/ur10e.xml"/>
+
+  <!-- Assets -->
+  <asset>
+    <texture type="skybox" builtin="gradient" rgb1="0.3 0.5 0.7" rgb2="0 0 0"
+        width="512" height="3072"/>
+    <texture type="2d" name="groundplane" builtin="checker" mark="edge" 
+        rgb1="0.2 0.3 0.4" rgb2="0.1 0.2 0.3" markrgb="0.8 0.8 0.8" width="300" height="300"/>
+    <material name="groundplane" texture="groundplane" texuniform="true" 
+        texrepeat="5 5" reflectance="0.2"/>
+  </asset>
+
+  <!-- Floor and light -->
+  <worldbody>
+    <light pos="0 0 1.5" dir="0 0 -1" directional="true"/>
+    <geom name="floor" size="0 0 0.05" type="plane" material="groundplane"  friction="0.001 0.005 0.001"/>
+  </worldbody>
+
+  <!-- Cube to track -->
+  <worldbody>
+    <body name="red_cube" pos="0 -0.8 0.2">
+      <geom type="box" size="0.05 0.05 0.05" rgba="1 0 0 1" friction="0.001 0.005 0.001"/>
+      <joint name="red_cube_joint" type="free"/>
+    </body>
+  </worldbody>  
+
+  <!-- Actuator -->
+  <actuator>
+    <velocity name="red_cube_vel" joint="red_cube_joint" ctrlrange="-20 20"/>
+  </actuator>
+
+</mujoco>
