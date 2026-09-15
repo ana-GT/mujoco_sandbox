@@ -1,0 +1,8 @@
+#pragma once
+#include <string>
+
+#define SCENE_FILENAME "@SCENE_VAR@"
+#define ROBOT_FILENAME "@ROBOT_VAR@"
+#define ROBOT_EE "@ROBOT_EE_VAR@"
+
+

@@ -4,10 +4,10 @@
 /**
  * @function initGlobal
  */
-void initGlobal(const std::string &_ee_name, const std::string &_target_name,
+void initGlobal(const std::string &_target_name,
 		const std::string &_target_actuator) {
 
-   g_ee_body_name =  _ee_name;
+   g_ee_body_name =  ROBOT_EE;
    g_target_name = _target_name;
    g_target_actuator = _target_actuator;
    
@@ -28,31 +28,34 @@ void initGlobal(const std::string &_ee_name, const std::string &_target_name,
 /**
  * @function loadModelData
  */
-bool loadModelData(int argc, const char** argv) {
+bool loadModelData() {
 
-  if (argc < 2) {
-    std::printf(" USAGE:  basic modelfile\n");
-    return false;
-  }
 
   // load and compile model
   char error[1000] = "Could not load binary model";
-  /*if (std::strlen(argv[1]) > 4 && !std::strcmp(argv[1] + std::strlen(argv[1]) - 4, ".mjb")) {
-    model = mj_loadModel(argv[1], 0);
-  } else {
-    model = mj_loadXML(argv[1], 0, error, 1000);
-  }*/
-  mjSpec* spec_scene = mj_parseXML(argv[1], NULL, error, sizeof(error));
-  mjSpec* spec_robot = mj_parseXML(argv[2], NULL, error, sizeof(error));
+
+  mjSpec *spec_scene, *spec_robot;
   
+  spec_scene = mj_parseXML(SCENE_FILENAME, NULL, error, sizeof(error));
+  spec_robot = mj_parseXML(ROBOT_FILENAME, NULL, error, sizeof(error));
   
-//   parent->compiler.degree = 0;
-//   child->compiler.degree = 1;
-   mjsElement* frame = mjs_addFrame(mjs_findBody(spec_scene, "world"), NULL)->element;
-   mjsElement* body = mjs_addBody(mjs_findBody(spec_robot, "world"), NULL)->element;
+  if(!spec_scene || !spec_robot) {
+    printf("Error loading either \n\t * scene: %s or \n\t * robot: %s \n", SCENE_FILENAME, ROBOT_FILENAME);
+    return false;
+  }  
+
+   mjsElement* frame = NULL;
+   mjsElement* robot_root = NULL;
+      
+   frame = mjs_addFrame(mjs_findBody(spec_scene, "world"), NULL)->element;   
+   
+   mjsElement* rb = mjs_firstElement(spec_robot, mjOBJ_BODY);   
+   robot_root = mjs_firstChild(mjs_asBody(rb), mjOBJ_BODY, 0);
+
+   
    mjsBody* attached_body_1 = NULL; 
-   attached_body_1 = mjs_asBody(mjs_attach(frame, body, "attached-", "-suffix"));
-       
+   attached_body_1 = mjs_asBody(mjs_attach(frame, robot_root, "", ""));
+
 
   if(!attached_body_1) {
     printf("Could not attach it \n");
@@ -63,12 +66,16 @@ bool loadModelData(int argc, const char** argv) {
   model = mj_compile(spec_scene, NULL);
   
   if (!model) { 
-    mju_error("Load model error: %s", error); 
+    mju_error("Load model error: %s", mjs_getError(spec_scene)); 
     return false;  
   }
 
+
   // make data
   data = mj_makeData(model);
+
+  loadKinematics();
+
   return true;
 }
 
@@ -77,11 +84,52 @@ bool loadModelData(int argc, const char** argv) {
  */
 void loadKinematics() {
 
-   g_num_dofs = 6;
+
+   for(int i = 0; i < model->nbody; ++i) {
+     const char* ni = mj_id2name(model, mjOBJ_BODY, i);
+     printf("NI: %s \n", ni);
+   }
+
+   int last_id = mj_name2id(model, mjOBJ_BODY, g_ee_body_name.c_str());
+   int chain_id;
+   printf("Last id: %d to body name: %s \n", last_id, g_ee_body_name.c_str());
+   std::vector<int> chain_ids;
+   do {
+     chain_ids.push_back(last_id);
+     chain_id = model->body_parentid[last_id];
+     last_id = chain_id;
+     
+   } while(last_id > 0);
+   
+   for(int i = 0; i < chain_ids.size(); ++i ) {
+     printf("Chain id: %d \n", chain_ids[i]);
+   }
+   
+   // Get joints
+   g_num_dofs = 0;
+
+   std::vector<int> chain_actuators;
+   for(int i = chain_ids.size() - 1; i >= 0; --i) {
+      
+      if(model->body_jntnum[chain_ids[i]] > 0) {
+        int jnt_addr = model->body_jntadr[ chain_ids[i] ];
+        printf("Jnt addr: %d \n", jnt_addr);
+        g_num_dofs += 1;
+        chain_actuators.push_back( model->jnt_actuatorid[jnt_addr] );
+      }
+   }
+  printf("Number of actuators: %d !!!!!!!!!!!!!\n", model->nactuator);
+  for(int i = 0; i < model->nactuator; ++i) {
+    printf("Actuator type: %d : %d and id: %d\n", i, model->actuator_trntype[i], model->actuator_trnid[i]);
+  }
+
+  for(int i = 0; i < chain_actuators.size(); ++i) {
+    printf("Chain actuator[%d]: %d \n", i, chain_actuators[i]);
+  }
 
   int num_act = model->nactuator;
   int num_jts = model->njnt;
-  printf("Num actuators: %d and num joints: %d !!!! \n", num_act, num_jts);
+  printf("Num actuators: %d and num joints: %d. Num dofs: %d !!!! \n", num_act, num_jts, g_num_dofs);
 }
 
 /**
@@ -132,6 +180,7 @@ void keyboard(GLFWwindow* _window, int _key, int _scancode, int _act, int _mods)
   // backspace: reset simulation
   if (_act == GLFW_PRESS)
   {
+    int start = 1;
     switch(_key) {
       case GLFW_KEY_BACKSPACE:
       {
@@ -143,7 +192,7 @@ void keyboard(GLFWwindow* _window, int _key, int _scancode, int _act, int _mods)
         mjtNum pose[g_num_dofs] = {0.0, 0.0, 0.0, 0.0, 0, 0};
         for(int i = 0; i < 6; ++i)
         { 
-          data->ctrl[i] = pose[i];
+          data->ctrl[start + i] = pose[i];
         }
 
       } break;
@@ -152,7 +201,7 @@ void keyboard(GLFWwindow* _window, int _key, int _scancode, int _act, int _mods)
         mjtNum pose[g_num_dofs] = {0.0, -1.5707, 0.0, -1.5707, 0, 0};
         for(int i = 0; i < 6; ++i)
         { 
-          data->ctrl[i] = pose[i];
+          data->ctrl[start + i] = pose[i];
         }
 
       } break;
@@ -161,7 +210,7 @@ void keyboard(GLFWwindow* _window, int _key, int _scancode, int _act, int _mods)
         mjtNum pose[g_num_dofs] = {0.707, -1.5708, 1.5708, -1.5707, -1.5708, 0};
         for(int i = 0; i < g_num_dofs; ++i)
         { 
-          data->ctrl[i] = pose[i];
+          data->ctrl[start + i] = pose[i];
         }
 
       } break;
@@ -263,9 +312,13 @@ void ik_control(const mjModel* _model, mjData* _data) {
   double damping = 0.1;
   double step_size = 2.0*M_PI/180.0;
 
+  int start = 6;
+  int start_u = 1;
 
   int nv = _model->nv;
-
+  int nu = _model->nu;
+  int nq = _model->nq;
+  printf("NV: %d - nu: %d, nq: %d \n", nv, nu, nq);
   int ee_id = mj_name2id(_model, mjOBJ_BODY, g_ee_body_name.c_str());
   if(ee_id < 1)
     return;
@@ -299,12 +352,12 @@ void ik_control(const mjModel* _model, mjData* _data) {
 
     for(int i = 0; i < 3; ++i) {
       for(int j = 0; j < g_num_dofs; ++j) {
-        jp(i, j) = jacp[nv*i+j];
+        jp(i, j) = jacp[nv*(start + i) +j];
       }
     }
 
     for(int i = 0; i < g_num_dofs; ++i) {
-      q(i) = data->qpos[i];
+      q(i) = data->qpos[start + i];
     }
 
     // num_dofs * num_dofs
@@ -325,7 +378,7 @@ void ik_control(const mjModel* _model, mjData* _data) {
     q += step_size * dq;
     
     for(int i = 0; i < g_num_dofs; ++i)
-      data->ctrl[i] = q[i];
+      data->ctrl[start_u + i] = q[i];
 
   } // if err
 
@@ -393,12 +446,10 @@ void cleanup() {
  */
 int main(int argc, const char** argv) {
 
-  initGlobal("wrist_3_link", "red_cube", "red_cube_vel");
+  initGlobal("red_cube", "red_cube_vel");
 
-  if(!loadModelData(argc, argv))
+  if(!loadModelData())
     return EXIT_FAILURE;
-
-  loadKinematics();
 
   // init GLFW
   if (!glfwInit()) { 

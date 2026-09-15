@@ -9,6 +9,8 @@
 #include <Eigen/Dense>
 #include <iostream>
 
+#include "config.h"
+
 // **********************
 // Global variables
 // **********************
@@ -38,8 +40,8 @@ double lasty;
 
 
 // Function declaration
-void initGlobal(const std::string &_ee_name, const std::string &_target_name,  const std::string &_target_actuator);
-bool loadModelData(int argc, const char** argv);
+void initGlobal(const std::string &_target_name,  const std::string &_target_actuator);
+bool loadModelData();
 void loadKinematics();
 void initializeViz();
 void setupIKControl();
