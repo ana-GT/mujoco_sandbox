@@ -1,8 +1,8 @@
 <mujoco model="ur10_tracking_scene">
 
-  <compiler meshdir="assets"/>
+  <compiler meshdir="assets" conflict="merge"/>
 
-  <include file="/home/ana/Software/mujoco_menagerie/universal_robots_ur10e/ur10e.xml"/>
+  <option integrator="implicitfast"/>
 
   <!-- Assets -->
   <asset>

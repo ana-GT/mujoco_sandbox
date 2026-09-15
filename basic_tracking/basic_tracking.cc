@@ -30,19 +30,38 @@ void initGlobal(const std::string &_ee_name, const std::string &_target_name,
  */
 bool loadModelData(int argc, const char** argv) {
 
-  if (argc != 2) {
+  if (argc < 2) {
     std::printf(" USAGE:  basic modelfile\n");
     return false;
   }
 
   // load and compile model
   char error[1000] = "Could not load binary model";
-  if (std::strlen(argv[1]) > 4 && !std::strcmp(argv[1] + std::strlen(argv[1]) - 4, ".mjb")) {
+  /*if (std::strlen(argv[1]) > 4 && !std::strcmp(argv[1] + std::strlen(argv[1]) - 4, ".mjb")) {
     model = mj_loadModel(argv[1], 0);
   } else {
     model = mj_loadXML(argv[1], 0, error, 1000);
-  }
+  }*/
+  mjSpec* spec_scene = mj_parseXML(argv[1], NULL, error, sizeof(error));
+  mjSpec* spec_robot = mj_parseXML(argv[2], NULL, error, sizeof(error));
+  
+  
+//   parent->compiler.degree = 0;
+//   child->compiler.degree = 1;
+   mjsElement* frame = mjs_addFrame(mjs_findBody(spec_scene, "world"), NULL)->element;
+   mjsElement* body = mjs_addBody(mjs_findBody(spec_robot, "world"), NULL)->element;
+   mjsBody* attached_body_1 = NULL; 
+   attached_body_1 = mjs_asBody(mjs_attach(frame, body, "attached-", "-suffix"));
+       
 
+  if(!attached_body_1) {
+    printf("Could not attach it \n");
+  } else {
+    printf("Could have atached YES! \n");
+  }
+  
+  model = mj_compile(spec_scene, NULL);
+  
   if (!model) { 
     mju_error("Load model error: %s", error); 
     return false;  

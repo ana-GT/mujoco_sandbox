@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.16)
 
 project(basic_tracking)
 
-set(MUJOCO_DIR "$ENV{HOME}/Software/mujoco") 
+set(MUJOCO_DIR "$ENV{HOME}/local/lib/cmake/mujoco") 
 list(APPEND CMAKE_PREFIX_PATH "${MUJOCO_DIR}")
 
 find_package(mujoco REQUIRED)
