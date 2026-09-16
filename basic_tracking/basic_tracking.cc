@@ -4,11 +4,30 @@
 /**
  * @function initGlobal
  */
-void initGlobal(const std::string &_target_name,
+bool initGlobal(int argc, const char** argv,
+                const std::string &_target_name,
 		const std::string &_target_actuator_x,
 		const std::string &_target_actuator_y) {
+   
+   std::string robot_opt;
+   if(argc < 2) {
+     printf("Error, needs an argument, panda or ur10 \n");
+     return false;
+   }
 
-   g_ee_body_name =  ROBOT_EE;
+   robot_opt = argv[1];
+   if(robot_opt == "panda")
+   {
+      g_robot_filename = std::string(MENAGERIE_DIR) + std::string("/franka_emika_panda/panda.xml"); 
+      g_ee_body_name = "link7";
+   } else if(robot_opt == "ur10") {
+     g_ee_body_name = "wrist_3_link";
+     g_robot_filename = std::string(MENAGERIE_DIR) + std::string("/universal_robots_ur10e/ur10e.xml");
+   } else {
+     printf("No model available \n");
+     return false;
+   }
+
    g_target_name = _target_name;
    g_target_actuator_x = _target_actuator_x;
    g_target_actuator_y = _target_actuator_y;   
@@ -25,6 +44,7 @@ void initGlobal(const std::string &_target_name,
    
    lastx = 0;
    lasty = 0;
+   return true;
 }
                 
 /**
@@ -39,10 +59,10 @@ bool loadModelData() {
   mjSpec *spec_scene, *spec_robot;
   
   spec_scene = mj_parseXML(SCENE_FILENAME, NULL, error, sizeof(error));
-  spec_robot = mj_parseXML(ROBOT_FILENAME, NULL, error, sizeof(error));
+  spec_robot = mj_parseXML(g_robot_filename.c_str(), NULL, error, sizeof(error));
   
   if(!spec_scene || !spec_robot) {
-    printf("Error loading either \n\t * scene: %s or \n\t * robot: %s \n", SCENE_FILENAME, ROBOT_FILENAME);
+    printf("Error loading either \n\t * scene: %s or \n\t * robot: %s \n", SCENE_FILENAME, g_robot_filename.c_str());
     return false;
   }  
 
@@ -89,12 +109,10 @@ void loadKinematics() {
 
    for(int i = 0; i < model->nbody; ++i) {
      const char* ni = mj_id2name(model, mjOBJ_BODY, i);
-     printf("NI: %s \n", ni);
    }
 
    int last_id = mj_name2id(model, mjOBJ_BODY, g_ee_body_name.c_str());
    int chain_id;
-   printf("Last id: %d to body name: %s \n", last_id, g_ee_body_name.c_str());
    std::vector<int> chain_ids;
    do {
      chain_ids.push_back(last_id);
@@ -103,31 +121,16 @@ void loadKinematics() {
      
    } while(last_id > 0);
    
-   for(int i = 0; i < chain_ids.size(); ++i ) {
-     printf("Chain id: %d \n", chain_ids[i]);
-   }
-   
    // Get joints
    g_num_dofs = 0;
 
-   std::vector<int> chain_actuators;
    for(int i = chain_ids.size() - 1; i >= 0; --i) {
       
       if(model->body_jntnum[chain_ids[i]] > 0) {
         int jnt_addr = model->body_jntadr[ chain_ids[i] ];
-        printf("Jnt addr: %d \n", jnt_addr);
         g_num_dofs += 1;
-        chain_actuators.push_back( model->jnt_actuatorid[jnt_addr] );
       }
    }
-  printf("Number of actuators: %d !!!!!!!!!!!!!\n", model->nactuator);
-  for(int i = 0; i < model->nactuator; ++i) {
-    printf("Actuator type: %d : %d and id: %d\n", i, model->actuator_trntype[i], model->actuator_trnid[i]);
-  }
-
-  for(int i = 0; i < chain_actuators.size(); ++i) {
-    printf("Chain actuator[%d]: %d \n", i, chain_actuators[i]);
-  }
 
   int num_act = model->nactuator;
   int num_jts = model->njnt;
@@ -334,7 +337,6 @@ void ik_control(const mjModel* _model, mjData* _data) {
   int nv = _model->nv;
   int nu = _model->nu;
   int nq = _model->nq;
-  printf("NV: %d - nu: %d, nq: %d num_joints: %d \n", nv, nu, nq, g_num_dofs);
 
   int ee_id = mj_name2id(_model, mjOBJ_BODY, g_ee_body_name.c_str());
   if(ee_id < 1)
@@ -462,7 +464,8 @@ void cleanup() {
  */
 int main(int argc, const char** argv) {
 
-  initGlobal("red_cube", "red_cube_vel_x", "red_cube_vel_y");
+  if(!initGlobal(argc, argv, "red_cube", "red_cube_vel_x", "red_cube_vel_y"))
+    return false;
 
   if(!loadModelData())
     return EXIT_FAILURE;

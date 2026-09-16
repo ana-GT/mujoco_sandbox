@@ -15,6 +15,7 @@
 // Global variables
 // **********************
 std::string g_ee_body_name;
+std::string g_robot_filename;
 std::string g_target_name;
 std::string g_target_actuator_x;
 std::string g_target_actuator_y;
@@ -41,7 +42,8 @@ double lasty;
 
 
 // Function declaration
-void initGlobal(const std::string &_target_name, 
+bool initGlobal(int argc, const char** argv,
+                const std::string &_target_name, 
 		const std::string &_target_actuator_x,
 		const std::string &_target_actuator_y);
 bool loadModelData();
