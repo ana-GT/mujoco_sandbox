@@ -23,6 +23,8 @@ int g_num_dofs;
 bool track;
 
 int g_start_u;
+int g_start_v;
+int g_start_q;
 
 // MuJoCo data structures
 mjModel*   model;

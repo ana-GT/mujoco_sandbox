@@ -137,6 +137,8 @@ void loadKinematics() {
   printf("Num actuators: %d and num joints: %d. Num dofs: %d !!!! \n", num_act, num_jts, g_num_dofs);
   
   g_start_u = 2;
+  g_start_v = 6;
+  g_start_q = 7;
 }
 
 /**
@@ -331,8 +333,6 @@ void ik_control(const mjModel* _model, mjData* _data) {
   double damping = 0.1;
   double step_size = 2.0*M_PI/180.0;
 
-  int start_v = 6;
-  int start_q = 7;
 
   int nv = _model->nv;
   int nu = _model->nu;
@@ -370,12 +370,12 @@ void ik_control(const mjModel* _model, mjData* _data) {
 
     for(int i = 0; i < 3; ++i) {
       for(int j = 0; j < g_num_dofs; ++j) {
-        jp(i, j) = jacp[nv*i +start_v + j];
+        jp(i, j) = jacp[nv*i + g_start_v + j];
       }
     }
 
     for(int i = 0; i < g_num_dofs; ++i) {
-      q(i) = data->qpos[start_q + i];
+      q(i) = data->qpos[g_start_q + i];
     }
 
     // num_dofs * num_dofs
