@@ -111,34 +111,56 @@ void loadKinematics() {
      const char* ni = mj_id2name(model, mjOBJ_BODY, i);
    }
 
-   int last_id = mj_name2id(model, mjOBJ_BODY, g_ee_body_name.c_str());
-   int chain_id;
-   std::vector<int> chain_ids;
+   std::string chain_body, last_body;
+   int chain_id, last_id;
+
+   last_body = g_ee_body_name;   
+   last_id = mj_name2id(model, mjOBJ_BODY, last_body.c_str());
+
+   std::vector<std::pair<int, std::string>> chain;
+   
    do {
-     chain_ids.push_back(last_id);
-     chain_id = model->body_parentid[last_id];
-     last_id = chain_id;
+     chain.push_back( {last_id, last_body} );
      
+     chain_id = model->body_parentid[last_id];
+     chain_body = mj_id2name(model, mjOBJ_BODY, chain_id);
+
+     last_id = chain_id;
+     last_body = chain_body;
    } while(last_id > 0);
    
    // Get joints
    g_num_dofs = 0;
 
-   for(int i = chain_ids.size() - 1; i >= 0; --i) {
+   std::pair<int, std::string> base;
+   for(int i = 0; i <= chain.size() - 1; ++i) {
       
-      if(model->body_jntnum[chain_ids[i]] > 0) {
-        int jnt_addr = model->body_jntadr[ chain_ids[i] ];
+      if(model->body_jntnum[chain[i].first] > 0) {
         g_num_dofs += 1;
+        base = chain[i];
       }
    }
 
-  int num_act = model->nactuator;
-  int num_jts = model->njnt;
-  printf("Num actuators: %d and num joints: %d. Num dofs: %d !!!! \n", num_act, num_jts, g_num_dofs);
+  // joint of fixed_link -> DOF -> base
+  int jt_id = model->body_jntadr[base.first];
+
+   
+  printf("BASE BODY: %s id: %d. Body jnt addr: %d dof adr: %d, qpos adr: %d \n", 
+         base.second.c_str(), base.first, 
+         model->body_jntadr[base.first], model->body_dofadr[base.first], 
+         model->jnt_qposadr[jt_id]);
   
-  g_start_u = 2;
-  g_start_v = 6;
-  g_start_q = 7;
+  
+  g_start_v = model->body_dofadr[base.first]; // dofs (e.g. 6 for the first pos/rot of cube)
+  g_start_q = model->jnt_qposadr[jt_id]; // 7, global coordinates
+  
+  for(int i = 0; i < model->nactuator;  ++i) {
+    if(model->actuator_trnid[2*i] == jt_id) {
+      g_start_u = i; // actuator (e.g. 2, after vel_x, vel_y for cube);
+      break;
+    }
+  }
+    
 }
 
 /**
