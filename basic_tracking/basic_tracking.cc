@@ -81,8 +81,7 @@ bool loadModelData() {
 
   if(!attached_body_1) {
     printf("Could not attach it \n");
-  } else {
-    printf("Could have atached YES! \n");
+    return false;
   }
   
   model = mj_compile(spec_scene, NULL);
