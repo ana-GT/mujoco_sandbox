@@ -135,6 +135,8 @@ void loadKinematics() {
   int num_act = model->nactuator;
   int num_jts = model->njnt;
   printf("Num actuators: %d and num joints: %d. Num dofs: %d !!!! \n", num_act, num_jts, g_num_dofs);
+  
+  g_start_u = 2;
 }
 
 /**
@@ -186,7 +188,6 @@ void keyboard(GLFWwindow* _window, int _key, int _scancode, int _act, int _mods)
   // backspace: reset simulation
   if (_act == GLFW_PRESS)
   {
-    int start_u = 2;
     switch(_key) {
       case GLFW_KEY_BACKSPACE:
       {
@@ -198,7 +199,7 @@ void keyboard(GLFWwindow* _window, int _key, int _scancode, int _act, int _mods)
         mjtNum pose[g_num_dofs] = {0.0, 0.0, 0.0, 0.0, 0, 0};
         for(int i = 0; i < 6; ++i)
         { 
-          data->ctrl[start_u + i] = pose[i];
+          data->ctrl[g_start_u + i] = pose[i];
         }
 
       } break;
@@ -207,7 +208,7 @@ void keyboard(GLFWwindow* _window, int _key, int _scancode, int _act, int _mods)
         mjtNum pose[g_num_dofs] = {0.0, -1.5707, 0.0, -1.5707, 0, 0};
         for(int i = 0; i < 6; ++i)
         { 
-          data->ctrl[start_u + i] = pose[i];
+          data->ctrl[g_start_u + i] = pose[i];
         }
 
       } break;
@@ -216,7 +217,7 @@ void keyboard(GLFWwindow* _window, int _key, int _scancode, int _act, int _mods)
         mjtNum pose[g_num_dofs] = {0.707, -1.5708, 1.5708, -1.5707, -1.5708, 0};
         for(int i = 0; i < g_num_dofs; ++i)
         { 
-          data->ctrl[start_u + i] = pose[i];
+          data->ctrl[g_start_u + i] = pose[i];
         }
 
       } break;
@@ -332,7 +333,6 @@ void ik_control(const mjModel* _model, mjData* _data) {
 
   int start_v = 6;
   int start_q = 7;
-  int start_u = 2;
 
   int nv = _model->nv;
   int nu = _model->nu;
@@ -396,7 +396,7 @@ void ik_control(const mjModel* _model, mjData* _data) {
     q += step_size * dq;
     
     for(int i = 0; i < g_num_dofs; ++i)
-      data->ctrl[start_u + i] = q[i];
+      data->ctrl[g_start_u + i] = q[i];
 
   } // if err
 

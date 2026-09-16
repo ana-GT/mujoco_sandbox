@@ -22,6 +22,8 @@ std::string g_target_actuator_y;
 int g_num_dofs;
 bool track;
 
+int g_start_u;
+
 // MuJoCo data structures
 mjModel*   model;
 mjData*    data;
