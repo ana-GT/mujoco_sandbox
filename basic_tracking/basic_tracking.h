@@ -16,7 +16,8 @@
 // **********************
 std::string g_ee_body_name;
 std::string g_target_name;
-std::string g_target_actuator;
+std::string g_target_actuator_x;
+std::string g_target_actuator_y;
 int g_num_dofs;
 bool track;
 
@@ -40,7 +41,9 @@ double lasty;
 
 
 // Function declaration
-void initGlobal(const std::string &_target_name,  const std::string &_target_actuator);
+void initGlobal(const std::string &_target_name, 
+		const std::string &_target_actuator_x,
+		const std::string &_target_actuator_y);
 bool loadModelData();
 void loadKinematics();
 void initializeViz();

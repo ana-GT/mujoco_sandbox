@@ -5,11 +5,13 @@
  * @function initGlobal
  */
 void initGlobal(const std::string &_target_name,
-		const std::string &_target_actuator) {
+		const std::string &_target_actuator_x,
+		const std::string &_target_actuator_y) {
 
    g_ee_body_name =  ROBOT_EE;
    g_target_name = _target_name;
-   g_target_actuator = _target_actuator;
+   g_target_actuator_x = _target_actuator_x;
+   g_target_actuator_y = _target_actuator_y;   
    
    track = false;
    
@@ -170,9 +172,10 @@ void keyboard(GLFWwindow* _window, int _key, int _scancode, int _act, int _mods)
   
   double dv = 0.5;
 
-  int target_id = mj_name2id(model, mjOBJ_ACTUATOR, g_target_actuator.c_str());
-
-  if(target_id < 0) {
+  int target_id_x = mj_name2id(model, mjOBJ_ACTUATOR, g_target_actuator_x.c_str());
+  int target_id_y = mj_name2id(model, mjOBJ_ACTUATOR, g_target_actuator_y.c_str());
+  
+  if(target_id_x < 0 || target_id_y < 0) {
     printf("Track object id is not valid! Return \n");
     return;
   }
@@ -180,7 +183,7 @@ void keyboard(GLFWwindow* _window, int _key, int _scancode, int _act, int _mods)
   // backspace: reset simulation
   if (_act == GLFW_PRESS)
   {
-    int start = 1;
+    int start_u = 2;
     switch(_key) {
       case GLFW_KEY_BACKSPACE:
       {
@@ -192,7 +195,7 @@ void keyboard(GLFWwindow* _window, int _key, int _scancode, int _act, int _mods)
         mjtNum pose[g_num_dofs] = {0.0, 0.0, 0.0, 0.0, 0, 0};
         for(int i = 0; i < 6; ++i)
         { 
-          data->ctrl[start + i] = pose[i];
+          data->ctrl[start_u + i] = pose[i];
         }
 
       } break;
@@ -201,7 +204,7 @@ void keyboard(GLFWwindow* _window, int _key, int _scancode, int _act, int _mods)
         mjtNum pose[g_num_dofs] = {0.0, -1.5707, 0.0, -1.5707, 0, 0};
         for(int i = 0; i < 6; ++i)
         { 
-          data->ctrl[start + i] = pose[i];
+          data->ctrl[start_u + i] = pose[i];
         }
 
       } break;
@@ -210,7 +213,7 @@ void keyboard(GLFWwindow* _window, int _key, int _scancode, int _act, int _mods)
         mjtNum pose[g_num_dofs] = {0.707, -1.5708, 1.5708, -1.5707, -1.5708, 0};
         for(int i = 0; i < g_num_dofs; ++i)
         { 
-          data->ctrl[start + i] = pose[i];
+          data->ctrl[start_u + i] = pose[i];
         }
 
       } break;
@@ -218,16 +221,28 @@ void keyboard(GLFWwindow* _window, int _key, int _scancode, int _act, int _mods)
       // Move box left
       case GLFW_KEY_A:
       {
-        data->ctrl[target_id] = -dv;
+        data->ctrl[target_id_x] = -dv;
       } break;
       case GLFW_KEY_S:
       {
-        data->ctrl[target_id] = 0.0;
+        data->ctrl[target_id_x] = 0.0;
+        data->ctrl[target_id_y] = 0.0;
       } break;
       case GLFW_KEY_D:
       {
-        data->ctrl[target_id] = dv;
+        data->ctrl[target_id_x] = dv;
       } break;
+
+      case GLFW_KEY_W:
+      {
+        data->ctrl[target_id_y] = -dv;
+      } break;
+      
+      case GLFW_KEY_X:
+      {
+        data->ctrl[target_id_y] = dv;
+      } break;
+
 
       case GLFW_KEY_O:
       {
@@ -312,13 +327,15 @@ void ik_control(const mjModel* _model, mjData* _data) {
   double damping = 0.1;
   double step_size = 2.0*M_PI/180.0;
 
-  int start = 6;
-  int start_u = 1;
+  int start_v = 6;
+  int start_q = 7;
+  int start_u = 2;
 
   int nv = _model->nv;
   int nu = _model->nu;
   int nq = _model->nq;
-  printf("NV: %d - nu: %d, nq: %d \n", nv, nu, nq);
+  printf("NV: %d - nu: %d, nq: %d num_joints: %d \n", nv, nu, nq, g_num_dofs);
+
   int ee_id = mj_name2id(_model, mjOBJ_BODY, g_ee_body_name.c_str());
   if(ee_id < 1)
     return;
@@ -327,8 +344,7 @@ void ik_control(const mjModel* _model, mjData* _data) {
   Eigen::Vector3d box_pos;
   Eigen::Vector3d err;
 
-  ee_pos << _data->xpos[3*ee_id], _data->xpos[3*ee_id + 1], _data->xpos[3*ee_id + 2];
-
+  getObjectPos(_model, _data, g_ee_body_name, ee_pos);
   getObjectPos(_model, _data, g_target_name, box_pos);
   box_pos(2) = box_pos(2) + 0.4; // Make EE go above it
 
@@ -352,12 +368,12 @@ void ik_control(const mjModel* _model, mjData* _data) {
 
     for(int i = 0; i < 3; ++i) {
       for(int j = 0; j < g_num_dofs; ++j) {
-        jp(i, j) = jacp[nv*(start + i) +j];
+        jp(i, j) = jacp[nv*i +start_v + j];
       }
     }
 
     for(int i = 0; i < g_num_dofs; ++i) {
-      q(i) = data->qpos[start + i];
+      q(i) = data->qpos[start_q + i];
     }
 
     // num_dofs * num_dofs
@@ -446,7 +462,7 @@ void cleanup() {
  */
 int main(int argc, const char** argv) {
 
-  initGlobal("red_cube", "red_cube_vel");
+  initGlobal("red_cube", "red_cube_vel_x", "red_cube_vel_y");
 
   if(!loadModelData())
     return EXIT_FAILURE;

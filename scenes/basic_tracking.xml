@@ -30,7 +30,8 @@
 
   <!-- Actuator -->
   <actuator>
-    <velocity name="red_cube_vel" joint="red_cube_joint" ctrlrange="-20 20"/>
+    <velocity name="red_cube_vel_x" joint="red_cube_joint" gear="1 0 0 0 0 0" ctrlrange="-20 20"/>
+    <velocity name="red_cube_vel_y" joint="red_cube_joint" gear="0 1 0 0 0 0" ctrlrange="-20 20"/>    
   </actuator>
 
 </mujoco>
