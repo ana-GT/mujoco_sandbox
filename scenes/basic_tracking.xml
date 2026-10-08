@@ -12,6 +12,14 @@
         rgb1="0.2 0.3 0.4" rgb2="0.1 0.2 0.3" markrgb="0.8 0.8 0.8" width="300" height="300"/>
     <material name="groundplane" texture="groundplane" texuniform="true" 
         texrepeat="5 5" reflectance="0.2"/>
+        
+    <!-- Table -->
+    <mesh name="simple_table" file="simple_table_2m.stl" scale="1.0 1.0 1.0"/>
+    <mesh name="rail_a" file="rails_2m_a.stl" scale="1.0 1.0 1.0"/>
+    <mesh name="rail_b" file="rails_2m_b.stl" scale="1.0 1.0 1.0"/>
+    <mesh name="rail_c" file="rails_2m_c.stl" scale="1.0 1.0 1.0"/>
+    <mesh name="rail_d" file="rails_2m_d.stl" scale="1.0 1.0 1.0"/>            
+    <material name="brown" rgba="0.6 0.3 0.0 1.0"/>  
   </asset>
 
   <!-- Floor and light -->
@@ -20,9 +28,20 @@
     <geom name="floor" size="0 0 0.05" type="plane" material="groundplane"  friction="0.001 0.005 0.001"/>
   </worldbody>
 
+  <!-- Table: Friction is important! Otherwise cube cannot slide -->
+  <worldbody>
+    <body name="table" pos="0.0 0.0 0.75">
+      <geom type="mesh" mesh="simple_table" material="brown" friction="0.001 0.005 0.001" contype="1" conaffinity="1"/>
+      <geom type="mesh" mesh="rail_a" material="brown" friction="0.001 0.005 0.001" contype="1" conaffinity="1"/>
+      <geom type="mesh" mesh="rail_b" material="brown" friction="0.001 0.005 0.001" contype="1" conaffinity="1"/>
+      <geom type="mesh" mesh="rail_c" material="brown" friction="0.001 0.005 0.001" contype="1" conaffinity="1"/>
+      <geom type="mesh" mesh="rail_d" material="brown" friction="0.001 0.005 0.001" contype="1" conaffinity="1"/>                        
+    </body>
+  </worldbody>
+
   <!-- Cube to track -->
   <worldbody>
-    <body name="red_cube" pos="0 -0.8 0.2">
+    <body name="red_cube" pos="0 -0.8 0.9">
       <geom type="box" size="0.05 0.05 0.05" rgba="1 0 0 1" friction="0.001 0.005 0.001"/>
       <joint name="red_cube_joint" type="free"/>
     </body>

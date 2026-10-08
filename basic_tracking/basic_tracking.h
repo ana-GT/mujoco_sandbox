@@ -8,14 +8,24 @@
 #include <mujoco/mujoco.h>
 #include <Eigen/Dense>
 #include <iostream>
+#include <map>
 
 #include "config.h"
 
 // **********************
 // Global variables
 // **********************
-std::string g_ee_body_name;
-std::string g_robot_filename;
+struct RobotData {
+  std::string ee_name;
+  std::string filename;
+  int num_dofs;
+  std::vector<double> pose_zero;
+  std::vector<double> pose_default;
+  std::vector<double> pose_point_down;
+};
+std::map<std::string, RobotData> gRobots;
+
+std::string g_robot_name;
 std::string g_target_name;
 std::string g_target_actuator_x;
 std::string g_target_actuator_y;
@@ -66,4 +76,4 @@ void ik_control(const mjModel* _model, mjData* _data);
 bool getObjectPos(const mjModel* _model, mjData* _data,
                const std::string &_name, 
                Eigen::Vector3d &_bp);
-
+bool fillRobotData(const std::string &_name, const std::string &_ee_name, const std::string &_filename);

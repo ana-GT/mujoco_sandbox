@@ -2,6 +2,40 @@
 #include "basic_tracking.h"
 
 /**
+ * @function fillRobotData
+ */
+bool fillRobotData(const std::string &_name, 
+		   const std::string &_ee_name, 
+		   const std::string &_filename,
+		   const int &_num_dofs) {
+  
+  if(gRobots.find(_name) != gRobots.end()) {
+    printf("ERROR: Robot %s already stored \n", _name.c_str());
+    return false;
+  }
+  
+  RobotData rdi;
+  rdi.ee_name = _ee_name;
+  rdi.filename = std::string(MENAGERIE_DIR) + _filename;
+  rdi.num_dofs = _num_dofs;
+    
+  if(_name == "ur10") {
+  
+     rdi.pose_zero = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+     rdi.pose_default = {0.0, -1.5707, 0.0, -1.5707, 0.0, 0.0};
+     rdi.pose_point_down = {0.707, -1.5708, 1.5708, -1.5707, -1.5708, 0.0};
+  } else if(_name == "panda") {
+  
+     rdi.pose_zero = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+     rdi.pose_default = {0.0, 0.0, 0.0, -1.5707, 0.0, 1.5708, 0.0};
+     rdi.pose_point_down = {-1.5708, 0.0, 0.0, -1.5707, 0.0, 1.5708, 0.0};
+  }
+  
+  gRobots[_name] = rdi;
+  return true;
+}
+
+/**
  * @function initGlobal
  */
 bool initGlobal(int argc, const char** argv,
@@ -9,24 +43,21 @@ bool initGlobal(int argc, const char** argv,
 		const std::string &_target_actuator_x,
 		const std::string &_target_actuator_y) {
    
-   std::string robot_opt;
    if(argc < 2) {
      printf("Error, needs an argument, panda or ur10 \n");
      return false;
    }
 
-   robot_opt = argv[1];
-   if(robot_opt == "panda")
+   fillRobotData("panda", "link7", "/franka_emika_panda/panda.xml", 7);
+   fillRobotData("ur10", "wrist_3_link", "/universal_robots_ur10e/ur10e.xml", 6);
+   
+   if(gRobots.find(argv[1]) == gRobots.end())
    {
-      g_robot_filename = std::string(MENAGERIE_DIR) + std::string("/franka_emika_panda/panda.xml"); 
-      g_ee_body_name = "link7";
-   } else if(robot_opt == "ur10") {
-     g_ee_body_name = "wrist_3_link";
-     g_robot_filename = std::string(MENAGERIE_DIR) + std::string("/universal_robots_ur10e/ur10e.xml");
-   } else {
-     printf("No model available \n");
+     printf("Robot model not found: %s", argv[1]);
      return false;
    }
+   
+   g_robot_name = argv[1];  
 
    g_target_name = _target_name;
    g_target_actuator_x = _target_actuator_x;
@@ -59,17 +90,18 @@ bool loadModelData() {
   mjSpec *spec_scene, *spec_robot;
   
   spec_scene = mj_parseXML(SCENE_FILENAME, NULL, error, sizeof(error));
-  spec_robot = mj_parseXML(g_robot_filename.c_str(), NULL, error, sizeof(error));
+  spec_robot = mj_parseXML(gRobots[g_robot_name].filename.c_str(), NULL, error, sizeof(error));
   
   if(!spec_scene || !spec_robot) {
-    printf("Error loading either \n\t * scene: %s or \n\t * robot: %s \n", SCENE_FILENAME, g_robot_filename.c_str());
+    printf("Error loading either \n\t * scene: %s or \n\t * robot: %s \n", SCENE_FILENAME, gRobots[g_robot_name].filename.c_str());
     return false;
   }  
 
    mjsElement* frame = NULL;
    mjsElement* robot_root = NULL;
       
-   frame = mjs_addFrame(mjs_findBody(spec_scene, "world"), NULL)->element;   
+   frame = mjs_addFrame(mjs_findBody(spec_scene, "world"), NULL)->element;
+   mjs_asFrame(frame)->pos[2] = 0.8;
    
    mjsElement* rb = mjs_firstElement(spec_robot, mjOBJ_BODY);   
    robot_root = mjs_firstChild(mjs_asBody(rb), mjOBJ_BODY, 0);
@@ -113,7 +145,7 @@ void loadKinematics() {
    std::string chain_body, last_body;
    int chain_id, last_id;
 
-   last_body = g_ee_body_name;   
+   last_body = gRobots[g_robot_name].ee_name;   
    last_id = mj_name2id(model, mjOBJ_BODY, last_body.c_str());
 
    std::vector<std::pair<int, std::string>> chain;
@@ -219,28 +251,25 @@ void keyboard(GLFWwindow* _window, int _key, int _scancode, int _act, int _mods)
       } break;
       case GLFW_KEY_0:
       {
-        mjtNum pose[g_num_dofs] = {0.0, 0.0, 0.0, 0.0, 0, 0};
-        for(int i = 0; i < 6; ++i)
+        for(int i = 0; i < g_num_dofs; ++i)
         { 
-          data->ctrl[g_start_u + i] = pose[i];
+          data->ctrl[g_start_u + i] = gRobots[g_robot_name].pose_zero[i];
         }
 
       } break;
       case GLFW_KEY_1:
-      {
-        mjtNum pose[g_num_dofs] = {0.0, -1.5707, 0.0, -1.5707, 0, 0};
-        for(int i = 0; i < 6; ++i)
+      { 
+        for(int i = 0; i < g_num_dofs; ++i)
         { 
-          data->ctrl[g_start_u + i] = pose[i];
+          data->ctrl[g_start_u + i] = gRobots[g_robot_name].pose_default[i];
         }
 
       } break;
       case GLFW_KEY_2:
       {
-        mjtNum pose[g_num_dofs] = {0.707, -1.5708, 1.5708, -1.5707, -1.5708, 0};
         for(int i = 0; i < g_num_dofs; ++i)
         { 
-          data->ctrl[g_start_u + i] = pose[i];
+          data->ctrl[g_start_u + i] = gRobots[g_robot_name].pose_point_down[i];
         }
 
       } break;
@@ -359,7 +388,7 @@ void ik_control(const mjModel* _model, mjData* _data) {
   int nu = _model->nu;
   int nq = _model->nq;
 
-  int ee_id = mj_name2id(_model, mjOBJ_BODY, g_ee_body_name.c_str());
+  int ee_id = mj_name2id(_model, mjOBJ_BODY, gRobots[g_robot_name].ee_name.c_str());
   if(ee_id < 1)
     return;
 
@@ -367,7 +396,7 @@ void ik_control(const mjModel* _model, mjData* _data) {
   Eigen::Vector3d box_pos;
   Eigen::Vector3d err;
 
-  getObjectPos(_model, _data, g_ee_body_name, ee_pos);
+  getObjectPos(_model, _data, gRobots[g_robot_name].ee_name, ee_pos);
   getObjectPos(_model, _data, g_target_name, box_pos);
   box_pos(2) = box_pos(2) + 0.4; // Make EE go above it
 
