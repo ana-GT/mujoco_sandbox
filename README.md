@@ -7,8 +7,8 @@ Projects
 
 
 <p float="left">
-  <img src="/images/mujoco_panda.png" width="100" />
-  <img src="/images/mujoco_ur10.png" width="100" /> 
+  <img src="/images/mujoco_panda.png" width="45%" />
+  <img src="/images/mujoco_ur10.png" width="45%" /> 
 </p>
 
 
