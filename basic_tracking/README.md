@@ -37,14 +37,14 @@ Run
    
 2. A Mujoco window will show up with the robot on top of a table and a cube. You can control it by:
 
-   0: Moves arm to a zero configuration (all joints to zero)
-   1: Moves arm to a default pose (up for UR10)
-   2: Moves the arm to a pose that has its EE pointing down
-   o: Turns on tracking mode Arm will move its EE so it is place on top of the cube.
-   f: Turns off tracking mode
-   a/d: Move cube to the left/right.
-   w/x: Move cube to up/down.
-   s: Stop cube's motion.
+   * 0: Moves arm to a zero configuration (all joints to zero)
+   * 1: Moves arm to a default pose (up for UR10)
+   * 2: Moves the arm to a pose that has its EE pointing down
+   * o: Turns on tracking mode Arm will move its EE so it is place on top of the cube.
+   * f: Turns off tracking mode
+   * a/d: Move cube to the left/right.
+   * w/x: Move cube to up/down.
+   * s: Stop cube's motion.
    
    
 Miscellaneous learning:
